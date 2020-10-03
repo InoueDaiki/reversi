@@ -43,7 +43,16 @@ function setStatus(rowIndex, colIndex) {
   status[rowIndex][colIndex] = currentColor;
   // 8方向に向かってひっくり返す探索と実行
   directions.forEach(([rowDiff, colDiff]) => {
-    reverseDisc(rowDiff, colDiff, rowIndex + rowDiff, colIndex + colDiff);
+    const reversable = getReversable(
+      rowDiff,
+      colDiff,
+      rowIndex + rowDiff,
+      colIndex + colDiff
+    );
+    if (!reversable) return;
+    reversable.forEach(([r, c]) => {
+      status[r][c] = currentColor;
+    });
   });
   // 置けるマスが無くなったら勝者判定
   if (getStatusCount(null) === 0) {
@@ -60,11 +69,10 @@ function setStatus(rowIndex, colIndex) {
   updateUI();
 }
 
-function reverseDisc(rowDiff, colDiff, currentRow, currentCol, dryRun = false) {
+function getReversable(rowDiff, colDiff, currentRow, currentCol) {
   /**
-   * 再帰的にひっくり返せるか探索しひっくり返す
-   * @param {Boolean} dryRun - trueでひっくり返さない
-   * @return {Number} ひっくり返した数を返す
+   * 再帰的にひっくり返せるか探索する
+   * @return {Array} ひっくり返せる座標を返す
    */
   // 端に到達したら何もせずに探索した経路を戻る
   if (currentRow < 0 || currentRow >= 8 || currentCol < 0 || currentCol >= 8)
@@ -75,21 +83,18 @@ function reverseDisc(rowDiff, colDiff, currentRow, currentCol, dryRun = false) {
   // nullに到達したら何もせずに探索した経路を戻る
   if (targetColor === null) return false;
 
-  // currentColorであればひっくり返しながら探索した経路を戻る
-  if (targetColor === currentColor) return 0;
+  // currentColorであればひっくりかえせることが伝わるようから配列を返す
+  if (targetColor === currentColor) return [];
 
   // currentColorでもnullでもない限り探索
-  const sholdReverse = reverseDisc(
+  const sholdReverse = getReversable(
     rowDiff,
     colDiff,
     currentRow + rowDiff,
     currentCol + colDiff
   );
   if (sholdReverse === false) return sholdReverse;
-  if (!dryRun) {
-    status[currentRow][currentCol] = currentColor;
-  }
-  return sholdReverse + 1;
+  return [...sholdReverse, [currentRow, currentCol]];
 }
 
 function isValid(rowIndex, colIndex, color) {
@@ -98,13 +103,8 @@ function isValid(rowIndex, colIndex, color) {
     status[rowIndex][colIndex] === null &&
     directions.some(
       ([rowDiff, colDiff]) =>
-        reverseDisc(
-          rowDiff,
-          colDiff,
-          rowIndex + rowDiff,
-          colIndex + colDiff,
-          true
-        ) > 0
+        getReversable(rowDiff, colDiff, rowIndex + rowDiff, colIndex + colDiff)
+          .length > 0
     )
   );
 }
